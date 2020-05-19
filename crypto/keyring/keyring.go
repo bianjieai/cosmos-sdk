@@ -12,17 +12,16 @@ import (
 	"strings"
 
 	"github.com/99designs/keyring"
-	"github.com/cosmos/go-bip39"
-	"github.com/pkg/errors"
-	"github.com/tendermint/crypto/bcrypt"
-	tmcrypto "github.com/tendermint/tendermint/crypto"
-	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
-
 	"github.com/cosmos/cosmos-sdk/client/input"
 	"github.com/cosmos/cosmos-sdk/crypto"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/go-bip39"
+	"github.com/pkg/errors"
+	"github.com/tendermint/crypto/bcrypt"
+	tmcrypto "github.com/tendermint/tendermint/crypto"
+	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 )
 
 const (
@@ -169,8 +168,8 @@ type keystore struct {
 func newKeystore(kr keyring.Keyring, opts ...Option) keystore {
 	// Default options for keybase
 	options := Options{
-		SupportedAlgos:       SigningAlgoList{hd.Secp256k1},
-		SupportedAlgosLedger: SigningAlgoList{hd.Secp256k1},
+		SupportedAlgos:       SigningAlgoList{hd.Sm2, hd.Secp256k1},
+		SupportedAlgosLedger: SigningAlgoList{hd.Sm2, hd.Secp256k1},
 	}
 
 	for _, optionFn := range opts {
