@@ -13,11 +13,14 @@ type SignatureAlgo interface {
 }
 
 func NewSigningAlgoFromString(str string) (SignatureAlgo, error) {
-	if str != string(hd.Secp256k1.Name()) {
+	switch str {
+	case string(hd.Secp256k1.Name()):
+		return hd.Secp256k1, nil
+	case string(hd.Sm2.Name()):
+		return hd.Sm2, nil
+	default:
 		return nil, fmt.Errorf("provided algorithm `%s` is not supported", str)
 	}
-
-	return hd.Secp256k1, nil
 }
 
 type SigningAlgoList []SignatureAlgo
