@@ -19,16 +19,16 @@ import (
 
 var (
 	// simulation signature values used to estimate gas consumption
-	simSecp256k1Pubkey secp256k1.PubKeySecp256k1
-	simSecp256k1Sig    [64]byte
+	simSm2Pubkey sm2.PubKeySm2
+	simSm2Sig    [64]byte
 
 	_ SigVerifiableTx = (*types.StdTx)(nil) // assert StdTx implements SigVerifiableTx
 )
 
 func init() {
-	// This decodes a valid hex string into a sepc256k1Pubkey for use in transaction simulation
+	// This decodes a valid hex string into a simSm2Pubkey for use in transaction simulation
 	bz, _ := hex.DecodeString("035AD6810A47F073553FF30D2FCC7E0D3B1C0B74B61A1AAA2582344037151E143A")
-	copy(simSecp256k1Pubkey[:], bz)
+	copy(simSm2Pubkey[:], bz)
 }
 
 // SignatureVerificationGasConsumer is the type of function that is used to both
@@ -73,7 +73,7 @@ func (spkd SetPubKeyDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate b
 			if !simulate {
 				continue
 			}
-			pk = simSecp256k1Pubkey
+			pk = simSm2Pubkey
 		}
 		// Only make check if simulate=false
 		if !simulate && !bytes.Equal(pk.Address(), signers[i]) {
@@ -139,10 +139,8 @@ func (sgcd SigGasConsumeDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simula
 			// In simulate mode the transaction comes with no signatures, thus if the
 			// account's pubkey is nil, both signature verification and gasKVStore.Set()
 			// shall consume the largest amount, i.e. it takes more gas to verify
-			// secp256k1 and sm2 keys than sm2 ones.
-			if pubKey == nil {
-				pubKey = simSecp256k1Pubkey
-			}
+			// sm2 keys than secp256k1 or ed25519 ones.
+			pubKey = simSm2Pubkey
 		}
 		err = sgcd.sigGasConsumer(ctx.GasMeter(), sig, pubKey, params)
 		if err != nil {
