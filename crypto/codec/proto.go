@@ -1,13 +1,12 @@
 package codec
 
 import (
-	tmcrypto "github.com/tendermint/tendermint/crypto"
-
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	tmcrypto "github.com/tendermint/tendermint/crypto"
 )
 
 // RegisterInterfaces registers the sdk.Tx interface.

@@ -19,6 +19,7 @@ const (
 	TxSizeCostPerByte      = "tx_size_cost_per_byte"
 	SigVerifyCostED25519   = "sig_verify_cost_ed25519"
 	SigVerifyCostSECP256K1 = "sig_verify_cost_secp256k1"
+	SigVerifyCostSm2       = "sig_verify_cost_sm2"
 )
 
 // RandomGenesisAccountsFn defines the function required to generate custom account types
@@ -91,6 +92,11 @@ func GenSigVerifyCostSECP256K1(r *rand.Rand) uint64 {
 	return uint64(simulation.RandIntBetween(r, 500, 1000))
 }
 
+// GenSigVerifyCostSM2 randomized SigVerifyCostSM2
+func GenSigVerifyCostSM2(r *rand.Rand) uint64 {
+	return uint64(simulation.RandIntBetween(r, 500, 1000))
+}
+
 // RandomizedGenState generates a random GenesisState for auth
 func RandomizedGenState(simState *module.SimulationState, randGenAccountsFn RandomGenesisAccountsFn) {
 	var maxMemoChars uint64
@@ -123,8 +129,14 @@ func RandomizedGenState(simState *module.SimulationState, randGenAccountsFn Rand
 		func(r *rand.Rand) { sigVerifyCostSECP256K1 = GenSigVerifyCostSECP256K1(r) },
 	)
 
+	var sigVerifyCostSm2 uint64
+	simState.AppParams.GetOrGenerate(
+		simState.Cdc, SigVerifyCostSm2, &sigVerifyCostSECP256K1, simState.Rand,
+		func(r *rand.Rand) { sigVerifyCostSm2 = GenSigVerifyCostSM2(r) },
+	)
+
 	params := types.NewParams(maxMemoChars, txSigLimit, txSizeCostPerByte,
-		sigVerifyCostED25519, sigVerifyCostSECP256K1)
+		sigVerifyCostED25519, sigVerifyCostSECP256K1, sigVerifyCostSm2)
 	genesisAccs := randGenAccountsFn(simState)
 
 	authGenesis := types.NewGenesisState(params, genesisAccs)
