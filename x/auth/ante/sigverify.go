@@ -5,12 +5,13 @@ import (
 	"encoding/hex"
 	"fmt"
 
+
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/crypto/sm2"
 
 	kmultisig "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/sm2"
 	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -22,7 +23,7 @@ import (
 
 var (
 	// simulation signature values used to estimate gas consumption
-	simSm2Pubkey sm2.PubKeySm2
+	simSm2Pubkey *sm2.PubKey
 	simSm2Sig    [64]byte
 
 	_ authsigning.SigVerifiableTx = (*legacytx.StdTx)(nil) // assert StdTx implements SigVerifiableTx
@@ -31,7 +32,7 @@ var (
 func init() {
 	// This decodes a valid hex string into a simSm2Pubkey for use in transaction simulation
 	bz, _ := hex.DecodeString("035AD6810A47F073553FF30D2FCC7E0D3B1C0B74B61A1AAA2582344037151E143A")
-	copy(simSm2Pubkey[:], bz)
+	simSm2Pubkey = &sm2.PubKey{Key: bz}
 }
 
 // SignatureVerificationGasConsumer is the type of function that is used to both
@@ -360,7 +361,7 @@ func DefaultSigVerificationGasConsumer(
 ) error {
 	pubkey := sig.PubKey
 	switch pubkey := pubkey.(type) {
-	case sm2.PubKeySm2:
+	case *sm2.PubKey:
 		meter.ConsumeGas(params.SigVerifyCostSm2, "ante verify: sm2")
 		return nil
 	case *ed25519.PubKey:

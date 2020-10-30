@@ -1,11 +1,11 @@
 package hd
 
 import (
-	bip39 "github.com/cosmos/go-bip39"
 	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/sm2"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/sm2"
+	bip39 "github.com/cosmos/go-bip39"
 )
 
 // PubKeyType defines an algorithm to derive key-pairs which can be used for cryptographic signing.
@@ -104,6 +104,6 @@ func (s sm2Algo) Generate() GenerateFn {
 	return func(bz []byte) crypto.PrivKey {
 		var bzArr [sm2.PrivKeySize]byte
 		copy(bzArr[:], bz)
-		return sm2.PrivKeySm2(bzArr)
+		return &sm2.PrivKey{Key: bzArr[:]}
 	}
 }
