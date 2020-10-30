@@ -1,28 +1,24 @@
 package sm2
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
-
 	"io"
 	"math/big"
 
 	"github.com/tjfoc/gmsm/sm2"
 
-	amino "github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/crypto"
+	tmsm2 "github.com/tendermint/tendermint/crypto/sm2"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	"github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 const (
-	PrivKeyAminoName = "tendermint/PrivKeySm2"
-	PubKeyAminoName  = "tendermint/PubKeySm2"
-
 	PrivKeySize   = 32
 	PubKeySize    = 33
 	SignatureSize = 64
@@ -31,20 +27,47 @@ const (
 )
 
 var (
-	_ cryptotypes.PrivKey = &PrivKeySm2{}
-	_ codec.AminoMarshaler = &PrivKeySm2{}
+	_ cryptotypes.PrivKey  = &PrivKey{}
+	_ codec.AminoMarshaler = &PrivKey{}
 )
 
 // --------------------------------------------------------
-func (privKey PrivKeySm2) Type() string {
+func (privKey PrivKey) Type() string {
 	return keyType
 }
 
-func (privKey PrivKeySm2) Bytes() []byte {
+// MarshalAmino overrides Amino binary marshalling.
+func (privKey PrivKey) MarshalAmino() ([]byte, error) {
+	return privKey.Key, nil
+}
+
+// UnmarshalAmino overrides Amino binary marshalling.
+func (privKey *PrivKey) UnmarshalAmino(bz []byte) error {
+	if len(bz) != PrivKeySize {
+		return fmt.Errorf("invalid privkey size")
+	}
+	privKey.Key = bz
+
+	return nil
+}
+
+// MarshalAminoJSON overrides Amino JSON marshalling.
+func (privKey PrivKey) MarshalAminoJSON() ([]byte, error) {
+	// When we marshal to Amino JSON, we don't marshal the "key" field itself,
+	// just its contents (i.e. the key bytes).
+	return privKey.MarshalAmino()
+}
+
+// UnmarshalAminoJSON overrides Amino JSON marshalling.
+func (privKey *PrivKey) UnmarshalAminoJSON(bz []byte) error {
+	return privKey.UnmarshalAmino(bz)
+}
+
+func (privKey PrivKey) Bytes() []byte {
 	return privKey.Key
 }
 
-func (privKey PrivKeySm2) Sign(msg []byte) ([]byte, error) {
+func (privKey PrivKey) Sign(msg []byte) ([]byte, error) {
 	priv := privKey.GetPrivateKey()
 	r, s, err := sm2.Sm2Sign(priv, msg, nil)
 	if err != nil {
@@ -59,49 +82,26 @@ func (privKey PrivKeySm2) Sign(msg []byte) ([]byte, error) {
 	return sig, nil
 }
 
-func (privKey PrivKeySm2) Sm2Sign(msg []byte) ([]byte, error) {
-	r, s, err := sm2.Sm2Sign(privKey.GetPrivateKey(), msg, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	R := r.Bytes()
-	S := s.Bytes()
-	sig := make([]byte, 64)
-	copy(sig[32-len(R):32], R[:])
-	copy(sig[64-len(S):64], S[:])
-
-	return sig, nil
-}
-
-func (privKey PrivKeySm2) PubKey() crypto.PubKey {
+func (privKey PrivKey) PubKey() crypto.PubKey {
 	priv := privKey.GetPrivateKey()
 	compPubkey := sm2.Compress(&priv.PublicKey)
-	var pubKey PubKeySm2
-	copy(pubKey[:], compPubkey)
 
-	return pubKey
+	pubkeyBytes := make([]byte, PubKeySize)
+	copy(pubkeyBytes, compPubkey)
+
+	return &PubKey{Key: pubkeyBytes}
 }
 
-func (privKey PrivKeySm2) PubKeySm2() PubKeySm2 {
-	priv := privKey.GetPrivateKey()
-	compPubkey := sm2.Compress(&priv.PublicKey)
-	var pubKey PubKeySm2
-	copy(pubKey[:], compPubkey)
-
-	return pubKey
-}
-
-func (privKey PrivKeySm2) Equals(other crypto.PrivKey) bool {
-	if otherSm2, ok := other.(PrivKeySm2); ok {
-		return subtle.ConstantTimeCompare(privKey[:], otherSm2[:]) == 1
+func (privKey PrivKey) Equals(other crypto.PrivKey) bool {
+	if privKey.Type() != other.Type() {
+		return false
 	}
 
-	return false
+	return subtle.ConstantTimeCompare(privKey.Bytes(), other.Bytes()) == 1
 }
 
-func (privKey PrivKeySm2) GetPrivateKey() *sm2.PrivateKey {
-	k := new(big.Int).SetBytes(privKey[:32])
+func (privKey PrivKey) GetPrivateKey() *sm2.PrivateKey {
+	k := new(big.Int).SetBytes(privKey.Key[:32])
 	c := sm2.P256Sm2()
 	priv := new(sm2.PrivateKey)
 	priv.PublicKey.Curve = c
@@ -111,11 +111,11 @@ func (privKey PrivKeySm2) GetPrivateKey() *sm2.PrivateKey {
 	return priv
 }
 
-func GenPrivKey() PrivKeySm2 {
+func GenPrivKey() PrivKey {
 	return genPrivKey(crypto.CReader())
 }
 
-func genPrivKey(rand io.Reader) PrivKeySm2 {
+func genPrivKey(rand io.Reader) PrivKey {
 	seed := make([]byte, 32)
 	if _, err := io.ReadFull(rand, seed); err != nil {
 		panic(err)
@@ -126,13 +126,13 @@ func genPrivKey(rand io.Reader) PrivKeySm2 {
 		panic(err)
 	}
 
-	var privKeySm2 PrivKeySm2
-	copy(privKeySm2[:], privKey.D.Bytes())
+	privKeyBytes := make([]byte, PrivKeySize)
+	copy(privKeyBytes, privKey.D.Bytes())
 
-	return privKeySm2
+	return PrivKey{Key: privKeyBytes}
 }
 
-func GenPrivKeySm2FromSecret(secret []byte) PrivKeySm2 {
+func GenPrivKeyFromSecret(secret []byte) PrivKey {
 	one := new(big.Int).SetInt64(1)
 	secHash := sha256.Sum256(secret)
 
@@ -141,56 +141,84 @@ func GenPrivKeySm2FromSecret(secret []byte) PrivKeySm2 {
 	k.Mod(k, n)
 	k.Add(k, one)
 
-	var privKeySm2 PrivKeySm2
-	copy(privKeySm2[:], k.Bytes())
-
-	return privKeySm2
+	return PrivKey{Key: k.Bytes()}
 }
 
-type PubKeySm2 [PubKeySize]byte
-var _ crypto.PubKey = PubKeySm2{}
+var _ cryptotypes.PubKey = &PubKey{}
+var _ codec.AminoMarshaler = &PubKey{}
+var _ cryptotypes.IntoTmPubKey = &PubKey{}
+
 // --------------------------------------------------------
 
-func (pubKey PubKeySm2) Address() crypto.Address {
-	return crypto.Address(tmhash.SumTruncated(pubKey[:]))
+func (pubKey PubKey) Address() crypto.Address {
+	if len(pubKey.Key) != PubKeySize {
+		panic("pubkey is incorrect size")
+	}
+	return crypto.Address(tmhash.SumTruncated(pubKey.Key))
 }
 
-func (pubKey PubKeySm2) Bytes() []byte {
-	return cdc.MustMarshalBinaryBare(pubKey)
+func (pubKey PubKey) Bytes() []byte {
+	return pubKey.Key
 }
 
-func (pubKey PubKeySm2) VerifyBytes(msg []byte, sig []byte) bool {
+func (pubKey *PubKey) VerifySignature(msg []byte, sig []byte) bool {
 	if len(sig) != SignatureSize {
 		return false
 	}
 
-	publicKey := sm2.Decompress(pubKey[:])
+	publicKey := sm2.Decompress(pubKey.Key)
 	r := new(big.Int).SetBytes(sig[:32])
 	s := new(big.Int).SetBytes(sig[32:])
 
 	return sm2.Sm2Verify(publicKey, msg, nil, r, s)
 }
 
-func (pubKey PubKeySm2) Sm2VerifyBytes(msg []byte, sig []byte) bool {
-	if len(sig) != SignatureSize {
+func (pubKey PubKey) String() string {
+	return fmt.Sprintf("PubKeySm2{%X}", pubKey.Key)
+}
+
+func (pubKey *PubKey) Type() string {
+	return keyType
+}
+
+func (pubKey PubKey) Equals(other crypto.PubKey) bool {
+	if pubKey.Type() != other.Type() {
 		return false
 	}
 
-	publicKey := sm2.Decompress(pubKey[:])
-	r := new(big.Int).SetBytes(sig[:32])
-	s := new(big.Int).SetBytes(sig[32:])
-
-	return sm2.Sm2Verify(publicKey, msg, nil, r, s)
+	return subtle.ConstantTimeCompare(pubKey.Bytes(), other.Bytes()) == 1
 }
 
-func (pubKey PubKeySm2) String() string {
-	return fmt.Sprintf("PubKeySm2{%X}", pubKey[:])
+// MarshalAmino overrides Amino binary marshalling.
+func (pubKey PubKey) MarshalAmino() ([]byte, error) {
+	return pubKey.Key, nil
 }
 
-func (pubKey PubKeySm2) Equals(other crypto.PubKey) bool {
-	if otherSm2, ok := other.(PubKeySm2); ok {
-		return bytes.Equal(pubKey[:], otherSm2[:])
-	} else {
-		return false
+// UnmarshalAmino overrides Amino binary marshalling.
+func (pubKey *PubKey) UnmarshalAmino(bz []byte) error {
+	if len(bz) != PubKeySize {
+		return errors.Wrap(errors.ErrInvalidPubKey, "invalid pubkey size")
 	}
+	pubKey.Key = bz
+
+	return nil
+}
+
+// MarshalAminoJSON overrides Amino JSON marshalling.
+func (pubKey PubKey) MarshalAminoJSON() ([]byte, error) {
+	// When we marshal to Amino JSON, we don't marshal the "key" field itself,
+	// just its contents (i.e. the key bytes).
+	return pubKey.MarshalAmino()
+}
+
+// UnmarshalAminoJSON overrides Amino JSON marshalling.
+func (pubKey *PubKey) UnmarshalAminoJSON(bz []byte) error {
+	return pubKey.UnmarshalAmino(bz)
+}
+
+// AsTmPubKey converts our own PubKey into a Tendermint ED25519 pubkey.
+func (pubKey *PubKey) AsTmPubKey() crypto.PubKey {
+	var pubkey tmsm2.PubKeySm2
+	copy(pubkey[:], pubKey.Key)
+	return pubKey
 }
