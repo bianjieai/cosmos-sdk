@@ -19,6 +19,9 @@ import (
 )
 
 const (
+	PrivKeyName = "cosmos/PrivKeySm2"
+	PubKeyName  = "cosmos/PubKeySm2"
+
 	PrivKeySize   = 32
 	PubKeySize    = 33
 	SignatureSize = 64
