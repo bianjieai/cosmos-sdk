@@ -220,5 +220,5 @@ func (pubKey *PubKey) UnmarshalAminoJSON(bz []byte) error {
 func (pubKey *PubKey) AsTmPubKey() crypto.PubKey {
 	var pubkey tmsm2.PubKeySm2
 	copy(pubkey[:], pubKey.Key)
-	return pubKey
+	return pubkey
 }
