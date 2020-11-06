@@ -82,6 +82,8 @@ func TestSetLoader(t *testing.T) {
 	_, err = os.Stat(upgradeInfoFilePath)
 	require.NoError(t, err)
 
+	upgradeHeight := int64(2)
+
 	cases := map[string]struct {
 		setLoader    func(*baseapp.BaseApp)
 		origStoreKey string
@@ -92,7 +94,7 @@ func TestSetLoader(t *testing.T) {
 			loadStoreKey: "foo",
 		},
 		"rename with inline opts": {
-			setLoader: useUpgradeLoader(0, &store.StoreUpgrades{
+			setLoader: useUpgradeLoader(upgradeHeight, &store.StoreUpgrades{
 				Renamed: []store.StoreRename{{
 					OldKey: "foo",
 					NewKey: "bar",
@@ -111,7 +113,6 @@ func TestSetLoader(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// prepare a db with some data
 			db := dbm.NewMemDB()
-
 			initStore(t, db, tc.origStoreKey, k, v)
 
 			// load the app with the existing db
@@ -127,14 +128,18 @@ func TestSetLoader(t *testing.T) {
 			err := app.LoadLatestVersion()
 			require.Nil(t, err)
 
-			// "execute" one block
-			app.BeginBlock(abci.RequestBeginBlock{Header: tmproto.Header{Height: 2}})
-			res := app.Commit()
-			require.NotNil(t, res.Data)
+			for i := app.LastBlockHeight() + 1; i <= upgradeHeight * 2; i++ {
+				// "execute" one block
+				app.BeginBlock(abci.RequestBeginBlock{Header: tmproto.Header{Height: i}})
+				res := app.Commit()
+				require.NotNil(t, res.Data)
 
-			// check db is properly updated
-			checkStore(t, db, 2, tc.loadStoreKey, k, v)
-			checkStore(t, db, 2, tc.loadStoreKey, []byte("foo"), nil)
+				if i >= upgradeHeight {
+					// check db is properly updated
+					checkStore(t, db, i, tc.loadStoreKey, k, v)
+					checkStore(t, db, i, tc.loadStoreKey, []byte("foo"), nil)
+				}
+			}
 		})
 	}
 }

@@ -85,6 +85,11 @@ func (rs *Store) GetPruning() types.PruningOptions {
 	return rs.pruningOpts
 }
 
+// GetLatestVersion return the latest version from the root store.
+func (rs *Store) GetLatestVersion() int64 {
+	return getLatestVersion(rs.db)
+}
+
 // SetPruning sets the pruning strategy on the root store and all the sub-stores.
 // Note, calling SetPruning on the root store prior to LoadVersion or
 // LoadLatestVersion performs a no-op as the stores aren't mounted yet.

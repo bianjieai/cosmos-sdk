@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -10,12 +11,8 @@ import (
 // pattern. This is useful for custom upgrade loading logic.
 func UpgradeStoreLoader(upgradeHeight int64, storeUpgrades *store.StoreUpgrades) baseapp.StoreLoader {
 	return func(ms sdk.CommitMultiStore) error {
-		//TODO
-		if err := ms.LoadLatestVersion(); err != nil {
-			return err
-		}
-
-		if upgradeHeight == ms.LastCommitID().Version+1 {
+		latestVersion := ms.(*rootmulti.Store).GetLatestVersion()
+		if upgradeHeight == latestVersion+1 {
 			// Check if the current commit version and upgrade height matches
 			if len(storeUpgrades.Renamed) > 0 ||
 				len(storeUpgrades.Deleted) > 0 || len(storeUpgrades.Added) > 0 {
