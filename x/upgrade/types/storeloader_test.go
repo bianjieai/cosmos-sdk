@@ -65,11 +65,13 @@ func checkStore(t *testing.T, db dbm.DB, ver int64, storeKey string, k, v []byte
 // Test that we can make commits and then reload old versions.
 // Test that LoadLatestVersion actually does.
 func TestSetLoader(t *testing.T) {
+	upgradeHeight := int64(5)
+
 	// set a temporary home dir
 	homeDir := t.TempDir()
 	upgradeInfoFilePath := filepath.Join(homeDir, "upgrade-info.json")
 	upgradeInfo := &store.UpgradeInfo{
-		Name: "test", Height: 0,
+		Name: "test", Height: upgradeHeight,
 	}
 
 	data, err := json.Marshal(upgradeInfo)
@@ -81,8 +83,6 @@ func TestSetLoader(t *testing.T) {
 	// make sure it exists before running everything
 	_, err = os.Stat(upgradeInfoFilePath)
 	require.NoError(t, err)
-
-	upgradeHeight := int64(2)
 
 	cases := map[string]struct {
 		setLoader    func(*baseapp.BaseApp)
@@ -113,33 +113,41 @@ func TestSetLoader(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// prepare a db with some data
 			db := dbm.NewMemDB()
+
 			initStore(t, db, tc.origStoreKey, k, v)
 
 			// load the app with the existing db
 			opts := []func(*baseapp.BaseApp){baseapp.SetPruning(store.PruneNothing)}
+
+			origapp := baseapp.NewBaseApp(t.Name(), defaultLogger(), db, nil, opts...)
+			origapp.MountStores(sdk.NewKVStoreKey(tc.origStoreKey))
+			err := origapp.LoadLatestVersion()
+			require.Nil(t, err)
+
+			for i := int64(2); i <= upgradeHeight-1; i++ {
+				origapp.BeginBlock(abci.RequestBeginBlock{Header: tmproto.Header{Height: i}})
+				res := origapp.Commit()
+				require.NotNil(t, res.Data)
+			}
+
 			if tc.setLoader != nil {
 				opts = append(opts, tc.setLoader)
 			}
 
+			// load the new app with the original app db
 			app := baseapp.NewBaseApp(t.Name(), defaultLogger(), db, nil, opts...)
-			capKey := sdk.NewKVStoreKey("main")
-			app.MountStores(capKey)
 			app.MountStores(sdk.NewKVStoreKey(tc.loadStoreKey))
-			err := app.LoadLatestVersion()
+			err = app.LoadLatestVersion()
 			require.Nil(t, err)
 
-			for i := app.LastBlockHeight() + 1; i <= upgradeHeight * 2; i++ {
-				// "execute" one block
-				app.BeginBlock(abci.RequestBeginBlock{Header: tmproto.Header{Height: i}})
-				res := app.Commit()
-				require.NotNil(t, res.Data)
+			// "execute" one block
+			app.BeginBlock(abci.RequestBeginBlock{Header: tmproto.Header{Height: upgradeHeight}})
+			res := app.Commit()
+			require.NotNil(t, res.Data)
 
-				if i >= upgradeHeight {
-					// check db is properly updated
-					checkStore(t, db, i, tc.loadStoreKey, k, v)
-					checkStore(t, db, i, tc.loadStoreKey, []byte("foo"), nil)
-				}
-			}
+			// check db is properly updated
+			checkStore(t, db, upgradeHeight, tc.loadStoreKey, k, v)
+			checkStore(t, db, upgradeHeight, tc.loadStoreKey, []byte("foo"), nil)
 		})
 	}
 }
