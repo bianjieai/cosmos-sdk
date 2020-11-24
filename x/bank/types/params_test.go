@@ -37,15 +37,15 @@ func Test_validateSendEnabledParam(t *testing.T) {
 }
 
 func Test_sendParamEqual(t *testing.T) {
-	// paramsA := NewSendEnabled(sdk.DefaultBondDenom, true)
-	// paramsB := NewSendEnabled(sdk.DefaultBondDenom, true)
-	// paramsC := NewSendEnabled("foodenom", false)
+	paramsA := NewSendEnabled(sdk.DefaultBondDenom, true)
+	paramsB := NewSendEnabled(sdk.DefaultBondDenom, true)
+	paramsC := NewSendEnabled("foodenom", false)
 
-	// ok := paramsA.Equal(paramsB)
-	// require.True(t, ok)
+	ok := paramsA.Equal(paramsB)
+	require.True(t, ok)
 
-	// ok = paramsA.Equal(paramsC)
-	// require.False(t, ok)
+	ok = paramsA.Equal(paramsC)
+	require.False(t, ok)
 }
 
 func Test_sendParamString(t *testing.T) {
