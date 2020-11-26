@@ -1736,14 +1736,14 @@ func TestGRPCQuery(t *testing.T) {
 // Test p2p filter queries
 func TestP2PQuery(t *testing.T) {
 	addrPeerFilterOpt := func(bapp *BaseApp) {
-		bapp.SetAddrPeerFilter(func(addrport string) abci.ResponseQuery {
+		bapp.SetAddrPeerFilter(func(ctx sdk.Context, addrport string) abci.ResponseQuery {
 			require.Equal(t, "1.1.1.1:8000", addrport)
 			return abci.ResponseQuery{Code: uint32(3)}
 		})
 	}
 
 	idPeerFilterOpt := func(bapp *BaseApp) {
-		bapp.SetIDPeerFilter(func(id string) abci.ResponseQuery {
+		bapp.SetIDPeerFilter(func(ctx sdk.Context, id string) abci.ResponseQuery {
 			require.Equal(t, "testid", id)
 			return abci.ResponseQuery{Code: uint32(4)}
 		})
