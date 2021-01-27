@@ -12,10 +12,6 @@ import (
 const (
 	// DefaultSendEnabled enabled
 	DefaultSendEnabled = true
-
-	// DefaultUnrestrictedTokenTransfer is set to false, which
-	// means that either of two parties of the transfer must be the token owner
-	DefaultUnrestrictedTokenTransfer = false
 )
 
 var (
@@ -23,8 +19,6 @@ var (
 	KeySendEnabled = []byte("SendEnabled")
 	// KeyDefaultSendEnabled is store's key for the DefaultSendEnabled option
 	KeyDefaultSendEnabled = []byte("DefaultSendEnabled")
-	// KeyUnrestrictedTokenTransfer is store's key for the UnrestrictedTokenTransfer param
-	KeyUnrestrictedTokenTransfer = []byte("UnrestrictedTokenTransfer")
 )
 
 // ParamKeyTable for bank module.
@@ -33,15 +27,10 @@ func ParamKeyTable() paramtypes.KeyTable {
 }
 
 // NewParams creates a new parameter configuration for the bank module
-func NewParams(
-	defaultSendEnabled bool,
-	sendEnabledParams SendEnabledParams,
-	unrestrictedTokenTransfer bool,
-) Params {
+func NewParams(defaultSendEnabled bool, sendEnabledParams SendEnabledParams) Params {
 	return Params{
-		SendEnabled:               sendEnabledParams,
-		DefaultSendEnabled:        defaultSendEnabled,
-		UnrestrictedTokenTransfer: unrestrictedTokenTransfer,
+		SendEnabled:        sendEnabledParams,
+		DefaultSendEnabled: defaultSendEnabled,
 	}
 }
 
@@ -50,8 +39,7 @@ func DefaultParams() Params {
 	return Params{
 		SendEnabled: SendEnabledParams{},
 		// The default send enabled value allows send transfers for all coin denoms
-		DefaultSendEnabled:        true,
-		UnrestrictedTokenTransfer: DefaultUnrestrictedTokenTransfer,
+		DefaultSendEnabled: true,
 	}
 }
 
@@ -60,12 +48,7 @@ func (p Params) Validate() error {
 	if err := validateSendEnabledParams(p.SendEnabled); err != nil {
 		return err
 	}
-
-	if err := validateIsBool(p.DefaultSendEnabled); err != nil {
-		return err
-	}
-
-	return validateIsBool(p.UnrestrictedTokenTransfer)
+	return validateIsBool(p.DefaultSendEnabled)
 }
 
 // String implements the Stringer interface.
@@ -94,7 +77,7 @@ func (p Params) SetSendEnabledParam(denom string, sendEnabled bool) Params {
 		}
 	}
 	sendParams = append(sendParams, NewSendEnabled(denom, sendEnabled))
-	return NewParams(p.DefaultSendEnabled, sendParams, p.UnrestrictedTokenTransfer)
+	return NewParams(p.DefaultSendEnabled, sendParams)
 }
 
 // ParamSetPairs implements params.ParamSet
@@ -102,7 +85,6 @@ func (p *Params) ParamSetPairs() paramtypes.ParamSetPairs {
 	return paramtypes.ParamSetPairs{
 		paramtypes.NewParamSetPair(KeySendEnabled, &p.SendEnabled, validateSendEnabledParams),
 		paramtypes.NewParamSetPair(KeyDefaultSendEnabled, &p.DefaultSendEnabled, validateIsBool),
-		paramtypes.NewParamSetPair(KeyUnrestrictedTokenTransfer, &p.UnrestrictedTokenTransfer, validateIsBool),
 	}
 }
 
