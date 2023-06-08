@@ -172,6 +172,7 @@ func (suite *KeeperTestSuite) TestInitGenesis() {
 			TxSizeCostPerByte:      types.DefaultTxSizeCostPerByte + 1,
 			SigVerifyCostED25519:   types.DefaultSigVerifyCostED25519 + 1,
 			SigVerifyCostSecp256k1: types.DefaultSigVerifyCostSecp256k1 + 1,
+			SigVerifyCostSm2:       types.DefaultSigVerifyCostSm2 + 1,
 		},
 	}
 

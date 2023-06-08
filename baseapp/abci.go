@@ -133,18 +133,18 @@ func (app *BaseApp) Info(req abci.RequestInfo) abci.ResponseInfo {
 }
 
 // FilterPeerByAddrPort filters peers by address/port.
-func (app *BaseApp) FilterPeerByAddrPort(info string) abci.ResponseQuery {
+func (app *BaseApp) FilterPeerByAddrPort(ctx sdk.Context, info string) abci.ResponseQuery {
 	if app.addrPeerFilter != nil {
-		return app.addrPeerFilter(info)
+		return app.addrPeerFilter(ctx, info)
 	}
 
 	return abci.ResponseQuery{}
 }
 
 // FilterPeerByID filters peers by node ID.
-func (app *BaseApp) FilterPeerByID(info string) abci.ResponseQuery {
+func (app *BaseApp) FilterPeerByID(ctx sdk.Context, info string) abci.ResponseQuery {
 	if app.idPeerFilter != nil {
-		return app.idPeerFilter(info)
+		return app.idPeerFilter(ctx, info)
 	}
 
 	return abci.ResponseQuery{}
@@ -949,6 +949,11 @@ func handleQueryP2P(app *BaseApp, path []string) abci.ResponseQuery {
 			), app.trace)
 	}
 
+	ctx, err := app.CreateQueryContext(0, false)
+	if err != nil {
+		return sdkerrors.QueryResult(err, false)
+	}
+
 	var resp abci.ResponseQuery
 
 	cmd, typ, arg := path[1], path[2], path[3]
@@ -956,10 +961,10 @@ func handleQueryP2P(app *BaseApp, path []string) abci.ResponseQuery {
 	case "filter":
 		switch typ {
 		case "addr":
-			resp = app.FilterPeerByAddrPort(arg)
+			resp = app.FilterPeerByAddrPort(ctx, arg)
 
 		case "id":
-			resp = app.FilterPeerByID(arg)
+			resp = app.FilterPeerByID(ctx, arg)
 		}
 
 	default:

@@ -53,6 +53,7 @@ require (
 	github.com/stretchr/testify v1.8.2
 	github.com/tendermint/go-amino v0.16.0
 	github.com/tidwall/btree v1.6.0
+	github.com/tjfoc/gmsm v1.4.0
 	golang.org/x/crypto v0.7.0
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	google.golang.org/genproto v0.0.0-20230216225411-c8e22ba71e44
@@ -167,6 +168,8 @@ require (
 replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
+	// CometBFT with sm2 crypto
+	github.com/cometbft/cometbft => github.com/bianjieai/cometbft v0.37.1-irita-230607
 	// dgrijalva/jwt-go is deprecated and doesn't receive security updates.
 	// TODO: remove it: https://github.com/cosmos/cosmos-sdk/issues/13134
 	github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt/v4 v4.4.2

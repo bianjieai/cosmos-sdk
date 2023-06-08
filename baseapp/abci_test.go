@@ -214,20 +214,29 @@ func TestABCI_GRPCQuery(t *testing.T) {
 
 func TestABCI_P2PQuery(t *testing.T) {
 	addrPeerFilterOpt := func(bapp *baseapp.BaseApp) {
-		bapp.SetAddrPeerFilter(func(addrport string) abci.ResponseQuery {
+		bapp.SetAddrPeerFilter(func(ctx sdk.Context, addrport string) abci.ResponseQuery {
 			require.Equal(t, "1.1.1.1:8000", addrport)
 			return abci.ResponseQuery{Code: uint32(3)}
 		})
 	}
 
 	idPeerFilterOpt := func(bapp *baseapp.BaseApp) {
-		bapp.SetIDPeerFilter(func(id string) abci.ResponseQuery {
+		bapp.SetIDPeerFilter(func(ctx sdk.Context, id string) abci.ResponseQuery {
 			require.Equal(t, "testid", id)
 			return abci.ResponseQuery{Code: uint32(4)}
 		})
 	}
 
 	suite := NewBaseAppSuite(t, addrPeerFilterOpt, idPeerFilterOpt)
+
+	// As the modified handleQueryP2P needs a query context, the lastBlockHeight
+	// must not be zero. Therefore, we initiate the chain and commit one block here.
+	suite.baseApp.InitChain(abci.RequestInitChain{
+		ConsensusParams: &tmproto.ConsensusParams{},
+	})
+	header := tmproto.Header{Height: suite.baseApp.LastBlockHeight() + 1}
+	suite.baseApp.BeginBlock(abci.RequestBeginBlock{Header: header})
+	suite.baseApp.Commit()
 
 	addrQuery := abci.RequestQuery{
 		Path: "/p2p/filter/addr/1.1.1.1:8000",

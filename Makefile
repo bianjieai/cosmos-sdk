@@ -60,7 +60,8 @@ ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=sim \
 		  -X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 		  -X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 		  -X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags_comma_sep)" \
-		  -X github.com/cometbft/cometbft/version.TMCoreSemVer=$(TMVERSION)
+		  -X github.com/tendermint/tendermint/version.TMCoreSemVer=$(TMVERSION) \
+          -X github.com/tendermint/tendermint/crypto/algo.Algo=sm2
 
 
 # DB backend selection
