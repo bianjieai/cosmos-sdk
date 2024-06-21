@@ -57,8 +57,8 @@ require github.com/lib/pq v1.10.2 // indirect
 replace (
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.1.7-0.20210622111912-ef00f8ac3d76
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/tendermint/tendermint => github.com/bianjieai/tendermint v0.34.8-irita-210413.0.20240321054740-7cb3286ed2fe
-	github.com/tendermint/tm-db => github.com/Cyilong/tm-db v0.0.0-20240320101356-6d7e99cee128
+	github.com/tendermint/tendermint => github.com/bianjieai/tendermint v0.34.8-irita-210413.0.20240621060349-bf32b6606e33
+	github.com/tendermint/tm-db => github.com/bianjieai/tm-db v0.6.8-0.20240621060201-221d9d660682
 )
 
 // latest grpc doesn't work with with our modified proto compiler, so we need to enforce
