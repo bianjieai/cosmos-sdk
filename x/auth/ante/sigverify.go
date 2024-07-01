@@ -10,6 +10,7 @@ import (
 	kmultisig "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256r1"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/sm2"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -22,18 +23,16 @@ import (
 
 var (
 	// simulation signature values used to estimate gas consumption
-	key                = make([]byte, secp256k1.PubKeySize)
-	simSecp256k1Pubkey = &secp256k1.PubKey{Key: key}
-	simSecp256k1Sig    [64]byte
+	simSm2Pubkey *sm2.PubKey
+	simSm2Sig    [64]byte
 
 	_ authsigning.SigVerifiableTx = (*legacytx.StdTx)(nil) // assert StdTx implements SigVerifiableTx
 )
 
 func init() {
-	// This decodes a valid hex string into a sepc256k1Pubkey for use in transaction simulation
+	// This decodes a valid hex string into a simSm2Pubkey for use in transaction simulation
 	bz, _ := hex.DecodeString("035AD6810A47F073553FF30D2FCC7E0D3B1C0B74B61A1AAA2582344037151E143A")
-	copy(key, bz)
-	simSecp256k1Pubkey.Key = key
+	simSm2Pubkey = &sm2.PubKey{Key: bz}
 }
 
 // SignatureVerificationGasConsumer is the type of function that is used to both
@@ -72,7 +71,7 @@ func (spkd SetPubKeyDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate b
 			if !simulate {
 				continue
 			}
-			pk = simSecp256k1Pubkey
+			pk = simSm2Pubkey
 		}
 		// Only make check if simulate=false
 		if !simulate && !bytes.Equal(pk.Address(), signers[i]) {
@@ -175,7 +174,7 @@ func (sgcd SigGasConsumeDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simula
 		// shall consume the largest amount, i.e. it takes more gas to verify
 		// secp256k1 keys than ed25519 ones.
 		if simulate && pubKey == nil {
-			pubKey = simSecp256k1Pubkey
+			pubKey = simSm2Pubkey
 		}
 
 		// make a SignatureV2 with PubKey filled in from above
@@ -265,11 +264,18 @@ func (svd SigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simul
 		}
 
 		// Check account sequence number.
-		if sig.Sequence != acc.GetSequence() {
-			return ctx, sdkerrors.Wrapf(
-				sdkerrors.ErrWrongSequence,
-				"account sequence mismatch, expected %d, got %d", acc.GetSequence(), sig.Sequence,
-			)
+		// When using Amino StdSignatures, we actually don't have the Sequence in
+		// the SignatureV2 struct (it's only in the SignDoc). In this case, we
+		// cannot check sequence directly, and must do it via signature
+		// verification (in the VerifySignature call below).
+		onlyAminoSigners := OnlyLegacyAminoSigners(sig.Data)
+		if !onlyAminoSigners {
+			if sig.Sequence != acc.GetSequence() {
+				return ctx, sdkerrors.Wrapf(
+					sdkerrors.ErrWrongSequence,
+					"account sequence mismatch, expected %d, got %d", acc.GetSequence(), sig.Sequence,
+				)
+			}
 		}
 
 		// retrieve signer data
@@ -392,6 +398,9 @@ func DefaultSigVerificationGasConsumer(
 ) error {
 	pubkey := sig.PubKey
 	switch pubkey := pubkey.(type) {
+	case *sm2.PubKey:
+		meter.ConsumeGas(params.SigVerifyCostSm2, "ante verify: sm2")
+		return nil
 	case *ed25519.PubKey:
 		meter.ConsumeGas(params.SigVerifyCostED25519, "ante verify: ed25519")
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidPubKey, "ED25519 public keys are unsupported")

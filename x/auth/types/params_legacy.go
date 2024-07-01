@@ -16,6 +16,7 @@ var (
 	KeyTxSizeCostPerByte      = []byte("TxSizeCostPerByte")
 	KeySigVerifyCostED25519   = []byte("SigVerifyCostED25519")
 	KeySigVerifyCostSecp256k1 = []byte("SigVerifyCostSecp256k1")
+	KeySigVerifyCostSm2       = []byte("SigVerifyCostSm2")
 )
 
 var _ paramtypes.ParamSet = &Params{}
