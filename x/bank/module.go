@@ -201,7 +201,7 @@ func (am AppModule) WeightedOperations(simState module.SimulationState) []simtyp
 
 func init() {
 	appmodule.Register(&modulev1.Module{},
-		appmodule.Provide(ProvideModule),
+		appmodule.Provide(ProvideModule, types.ParamKeyTable),
 	)
 }
 

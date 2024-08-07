@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -194,8 +195,11 @@ func (AppModule) WeightedOperations(_ module.SimulationState) []simtypes.Weighte
 
 func init() {
 	appmodule.Register(&modulev1.Module{},
-		appmodule.Provide(ProvideModule),
+		appmodule.Provide(ProvideModule, ProvideKeyTable),
 	)
+}
+func ProvideKeyTable() paramstypes.KeyTable {
+	return types.ParamKeyTable()
 }
 
 type AuthInputs struct {
